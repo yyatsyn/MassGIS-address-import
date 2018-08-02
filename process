@@ -57,6 +57,8 @@ psql ${DB} -c "CREATE EXTENSION postgis;"
 ## Load the geofabrik extract.
 # Note that this clears the database of OSM tables first, but because
 # the database is truly empty, that doesn't amtter.
+
+# \todo Create a modified style file so that more address information is included.
 osm2pgsql -d ${DB} DATA/${MASS_OSM}
 
 ## \todo Load the MassGIS geodatabase.
