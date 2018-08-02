@@ -53,6 +53,7 @@ DB=massgis
 dropdb ${DB}
 createdb ${DB}
 psql ${DB} -c "CREATE EXTENSION postgis;"
+psql ${DB} -c "CREATE EXTENSION hstore;"
 
 ## Load the geofabrik extract.
 # Note that this clears the database of OSM tables first, but because

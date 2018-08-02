@@ -11,7 +11,7 @@ MEGA folder with files: https://mega.nz/#F!npsVmAiJ!1N69UR3I7E1PMZEQHDwBPQ
 # Prerequisites
 
  - postgresql (tested with 9.5)
- - osm2pgsql
+ - osm2pgsql (tested with 0.96.0)
  - gdal (including python module)
  - python
    - ? (list python modules)
