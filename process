@@ -45,9 +45,19 @@ fi
 
 ### Create and load database
 
-## \todo Drop any existing database.  Create a database and ensure postgis is loaded.
+DB=massgis
 
-## \todo Load the geofabrik extract.
+## Drop any existing database.  Create a database and ensure postgis
+## is loaded.
+# \todo Consider allowing rerunning processing without reloading.
+dropdb ${DB}
+createdb ${DB}
+psql ${DB} -c "CREATE EXTENSION postgis;"
+
+## Load the geofabrik extract.
+# Note that this clears the database of OSM tables first, but because
+# the database is truly empty, that doesn't amtter.
+osm2pgsql -d ${DB} DATA/${MASS_OSM}
 
 ## \todo Load the MassGIS geodatabase.
 
