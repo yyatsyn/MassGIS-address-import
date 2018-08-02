@@ -1,0 +1,52 @@
+#!/bin/sh
+
+# This file obtains the data needed for the overall import processing,
+# creates a fresh database, imports the data, and prodouces output
+# files.
+
+mkdir -p DATA
+
+### Download
+
+## Geofabrik Massachusetts
+
+# Thanks to Geofabrik for creating extracts!
+# The page for Massachusetts is at:
+#   http://download.geofabrik.de/north-america/us/massachusetts.html
+
+MASS_OSM=massachusetts-latest.osm.pbf
+
+if [ ! -f DATA/${MASS_OSM} ]; then
+   (cd DATA &&
+       if wget http://download.geofabrik.de/north-america/us/massachusetts-latest.osm.pbf; then
+	   echo "Downloaded Geofabrik Massachusetts"
+       else
+	   echo "failed to download Geofabrik Massachusetts"
+	   exit 1
+       fi)
+else
+    echo "Geofabrik Massachusetts extract already present"
+fi
+
+## MassGIS Statewide Points
+
+# https://docs.digital.mass.gov/dataset/massgis-data-master-address-data
+# https://docs.digital.mass.gov/dataset/massgis-data-master-address-data-statewide-address-points-geocoding
+# https://www.mass.gov/forms/massgis-request-statewide-address-points-data
+
+MASSGIS=MassGIS_AddressPoints_and_Locators.zip 
+
+if [ -f DATA/${MASSGIS} ]; then
+    echo "MassGIS data already present"
+else
+    echo "Obtain ${MASSGIS} and put it in DATA; see the script for instructions."
+    exit 1
+fi
+
+### Create and load database
+
+# \todo
+
+### Process and create output files
+
+# \todo
