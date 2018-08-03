@@ -71,12 +71,12 @@ psql ${DB} -c "CREATE EXTENSION hstore;"
 # the database is truly empty, that doesn't amtter.
 
 # \todo Create a modified style file so that more address information is included.
-osm2pgsql -d ${DB} --hstore DATA/${MASS_OSM}
+osm2pgsql -d ${DB}--hstore -l DATA/${MASS_OSM}
 
 ## \todo Load the MassGIS geodatabase.
 
 cd WORKING
 unzip ../DATA/${MASSGIS}
-# \todo Be careful to convert from NAD83 to WGS84, which are similar but not
-# the same.
-ogr2ogr -f PGDUMP - MassGIS_Statewide_Address_Points.gdb/a00000009.gdbtable | psql massgis > load.out
+# Note the conversion from the source reference system, which is NAD83 state plane, to WGS84.
+ogr2ogr -f PGDUMP mass.pgsql MassGIS_Statewide_Address_Points.gdb/a00000009.gdbtable -t_srs EPSG:4326
+psql massgis < mass.pgsql > mass.log
