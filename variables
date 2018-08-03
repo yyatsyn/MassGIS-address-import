@@ -1,0 +1,11 @@
+#!/bin/sh
+
+# Set variables, only.  The point is to include from scripts and to be
+# read for interactive shells to make cut/paste work.
+
+MASS_OSM=massachusetts-latest.osm.pbf
+
+MASSGIS=MassGIS_AddressPoints_and_Locators.zip 
+
+DB=massgis
+

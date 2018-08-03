@@ -3,6 +3,9 @@
 # This file obtains the data needed for the overall import processing,
 # creates a fresh database, and imports the data.
 
+### Set up variables for file and db names.
+. variables
+
 ### prep
 
 if [ ! -f process ]; then
@@ -24,9 +27,6 @@ mkdir WORKING
 # Thanks to Geofabrik for creating extracts!
 # The page for Massachusetts is at:
 #   http://download.geofabrik.de/north-america/us/massachusetts.html
-
-MASS_OSM=massachusetts-latest.osm.pbf
-
 if [ ! -f DATA/${MASS_OSM} ]; then
    (cd DATA &&
        if wget http://download.geofabrik.de/north-america/us/massachusetts-latest.osm.pbf; then
@@ -44,9 +44,6 @@ fi
 # https://docs.digital.mass.gov/dataset/massgis-data-master-address-data
 # https://docs.digital.mass.gov/dataset/massgis-data-master-address-data-statewide-address-points-geocoding
 # https://www.mass.gov/forms/massgis-request-statewide-address-points-data
-
-MASSGIS=MassGIS_AddressPoints_and_Locators.zip 
-
 if [ -f DATA/${MASSGIS} ]; then
     echo "MassGIS data already present"
 else
@@ -55,8 +52,6 @@ else
 fi
 
 ### Create and load database
-
-DB=massgis
 
 ## Drop any existing database.  Create a database and ensure postgis
 ## is loaded.
