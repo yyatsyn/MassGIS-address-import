@@ -3,15 +3,15 @@
 # This file obtains the data needed for the overall import processing,
 # creates a fresh database, and imports the data.
 
-### Set up variables for file and db names.
-. variables
-
 ### prep
 
-if [ ! -f process ]; then
-    echo "process must be run from the git checkout"
+if [ ! -f variables ]; then
+    echo "load must be run from the git checkout"
     exit 1
 fi
+
+# Set up variables for file and db names.
+. ./variables
 
 # ensure DATA is present for simplicity
 mkdir -p DATA
@@ -66,12 +66,21 @@ psql ${DB} -c "CREATE EXTENSION hstore;"
 # the database is truly empty, that doesn't amtter.
 
 # \todo Create a modified style file so that more address information is included.
-osm2pgsql -d ${DB}--hstore -l DATA/${MASS_OSM}
+osm2pgsql -d ${DB} --hstore -l DATA/${MASS_OSM}
 
 ## \todo Load the MassGIS geodatabase.
+# Note the conversion from the source reference system, which is NAD83 state plane, to WGS84.
 
 cd WORKING
 unzip ../DATA/${MASSGIS}
-# Note the conversion from the source reference system, which is NAD83 state plane, to WGS84.
-ogr2ogr -f PGDUMP mass.pgsql MassGIS_Statewide_Address_Points.gdb/a00000009.gdbtable -t_srs EPSG:4326
-psql massgis < mass.pgsql > mass.log
+# Ordinarily, we would load the entire .gdb, but for some reason this
+# is failing on some systems.  Instead, load the 9 component table
+# files.
+for table in `cd MassGIS_Statewide_Address_Points.gdb && ls a*.gdbtable`; do
+    SQL=massgis-$table.pgsql
+    LOG=massgis-$table.log
+    if [ ! -f ${SQL} ]; then
+	ogr2ogr -f PGDUMP ${SQL} MassGIS_Statewide_Address_Points.gdb/$table -t_srs EPSG:4326
+    fi
+    psql massgis < ${SQL} > massgis-$table.log
+done
