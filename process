@@ -1,10 +1,21 @@
 #!/bin/sh
 
 # This file obtains the data needed for the overall import processing,
-# creates a fresh database, imports the data, and prodouces output
-# files.
+# creates a fresh database, and imports the data.
 
+### prep
+
+if [ ! -f process ]; then
+    echo "process must be run from the git checkout"
+    exit 1
+fi
+
+# ensure DATA is present for simplicity
 mkdir -p DATA
+
+# Nuke and create directory for temporary and output files
+rm -rf WORKING
+mkdir WORKING
 
 ### Download
 
@@ -60,13 +71,12 @@ psql ${DB} -c "CREATE EXTENSION hstore;"
 # the database is truly empty, that doesn't amtter.
 
 # \todo Create a modified style file so that more address information is included.
-osm2pgsql -d ${DB} DATA/${MASS_OSM}
+osm2pgsql -d ${DB} --hstore DATA/${MASS_OSM}
 
 ## \todo Load the MassGIS geodatabase.
 
+cd WORKING
+unzip ../DATA/${MASSGIS}
 # \todo Be careful to convert from NAD83 to WGS84, which are similar but not
 # the same.
-
-### Process and create output files
-
-# \todo
+ogr2ogr -f PGDUMP - MassGIS_Statewide_Address_Points.gdb/a00000009.gdbtable | psql massgis > load.out
