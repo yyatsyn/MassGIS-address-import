@@ -16,4 +16,7 @@ MEGA folder with files: https://mega.nz/#F!npsVmAiJ!1N69UR3I7E1PMZEQHDwBPQ
  - osm2pgsql (tested with 0.96.0)
  - gdal (including python module)
  - python
-   - ? (list python modules)
+   - pandas
+   - geopandas
+   - titlecase
+   - urllib.request
