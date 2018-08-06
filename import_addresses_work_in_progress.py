@@ -1,7 +1,7 @@
 # The current script matches OSM buildings in MA with address points from MassGIS
 import geopandas as gpd
 import pandas as pd
-import osmnx as ox
+#import osmnx as ox
 import sys
 import os
 import gc
@@ -9,6 +9,7 @@ from titlecase import titlecase
 import urllib.request
 #import matplotlib.pyplot as plt
 
+path = "/home/yury/Desktop/"
 
 #-----------------------------------------------------------------------
 # Step 1:  Convert MassGIS gdb file into shp, keep only relevant variables
@@ -17,6 +18,18 @@ mgis_output_file = "/home/yury/MEGA/OSM/MA addresses/massgis_addresses_selected_
 select_vars = "FULL_NUMBER_STANDARDIZED,STREET_NAME,UNIT,BUILDING_NAME,COMMUNITY_NAME,GEOGRAPHIC_TOWN,POSTCODE,PC_NAME,COUNTY"
 convert_gdb_to_shp_command = "ogr2ogr -f 'ESRI Shapefile' '" + mgis_output_file + "' '" + mgis_input_file + "' -select " + select_vars
 os.system(convert_gdb_to_shp_command)
+
+# To process MassGIS files on a laptop (8Gb RAM), split the mgis_output_file into smaller files by counties
+mgis = gpd.read_file(mgis_output_file)
+mgis["OBJECTID"] = mgis.index
+ctys = set(mgis["COUNTY"].unique())
+ctys.discard(None)
+for cty in ctys:
+    print("Processing " + cty)
+    cty_mgis = mgis.loc[mgis["COUNTY"]==cty]
+    cty_mgis.to_file(path + cty + "_massgis_addresses_selected_variables.shp")
+
+mgis = None
 
 
 #-----------------------------------------------------------------------
@@ -91,13 +104,114 @@ os.system(streets_to_shp)
 str_all = gpd.read_file(path+'temp/lines.shp')
 str_all.to_file(path+'all_streets_ma.shp')
 
+
+#-----------------------------------------------------------------------
+# Step 3: check the correctness of OSM and imported addresses: 
+# -- does the building/address point has a street with the same name as in addr:street in its neighborhood?
+
+# ... existing OSM address points
+# For each address point we need to find K nearest streets (say, 3-4)
+# To avoid computing all possible pair-wise distances between addresses and streets (ways) make use of R-tree spatial index
+str_idx = str_all["geometry"].sindex
+# For each existing addr point create a list of 20 nearest streets (actually, streets with rectangulars nearest to the considered point) 
+K = 50 # number of streets to pre-select
+k = 7 # number of nearest streets to check
+# Create a list of nearest streets for each address point
+pnt_addr_nearest_str = [list(str_idx.nearest((pnt_addr.loc[i,"geometry"].x, pnt_addr.loc[i,"geometry"].y), K, objects='raw')) for i in range(len(pnt_addr))]
+# Compute the actual distance from the address point to pre-selected 20 streets 
+problem_addr = []
+for i in range(len(pnt_addr)):
+    print("Processing address " + str(i) + " out of " + str(len(pnt_addr)))
+    # find actual distance from the address point "i" to K nearest streets (aacording to R-tree spatial index)
+    dist = []
+    for j in range(K):
+        dist.append(pnt_addr.loc[i,"geometry"].distance(str_all["geometry"][pnt_addr_nearest_str[i][j]]))
+    
+    # sort actual distances (from smallest to largest)
+    srtd = dist[:]
+    srtd.sort()
+    # select k nearest streets, convert their names to upper case
+    c = [pnt_addr_nearest_str[i][l] for l in [dist.index(srtd[i]) for i in range(k)]]
+    nearest_streets_names = set(str_all.loc[c,"name"])
+    nearest_streets_names.discard(None)
+    nearest_streets_names_upper = [x.upper() for x in nearest_streets_names]
+    # if names of the street in addr:street does not match k nearest streets, then store the "i" index
+    if pnt_addr.loc[i,"addr_stree"].upper() not in nearest_streets_names_upper:
+        problem_addr.append(i)
+
+problem_pnt_addr = pnt_addr.loc[problem_addr]
+problem_pnt_addr.to_file(path + 'problem_pnt_addr.shp')
+
+# ... existing OSM buildings with addresses
+# Create a list of nearest streets for each address point
+bld_addr_nearest_str = [list(str_idx.nearest((bld_addr.loc[i,"geometry"].bounds), K, objects='raw')) for i in range(len(bld_addr))]
+# Compute the actual distance from the address point to pre-selected 20 streets 
+problem_addr = []
+for i in range(len(bld_addr)):
+    print("Processing address " + str(i) + " out of " + str(len(bld_addr)))
+    # find actual distance from the address point "i" to K nearest streets (aacording to R-tree spatial index)
+    dist = []
+    for j in range(K):
+        dist.append(bld_addr.loc[i,"geometry"].distance(str_all["geometry"][bld_addr_nearest_str[i][j]]))
+    
+    # sort actual distances (from smallest to largest)
+    srtd = dist[:]
+    srtd.sort()
+    # select k nearest streets, convert their names to upper case
+    c = [bld_addr_nearest_str[i][l] for l in [dist.index(srtd[i]) for i in range(k)]]
+    nearest_streets_names = set(str_all.loc[c,"name"])
+    nearest_streets_names.discard(None)
+    nearest_streets_names_upper = [x.upper() for x in nearest_streets_names]
+    # if names of the street in addr:street does not match k nearest streets, then store the "i" index
+    if bld_addr.loc[i,"addr_stree"].upper() not in nearest_streets_names_upper:
+        problem_addr.append(i)
+
+problem_bld_addr = bld_addr.loc[problem_addr]
+problem_bld_addr.to_file(path + 'problem_bld_addr.shp')
+
+# ... imported MassGIS addresses (process by counties)
+for cty in ctys:
+    print("Processing " + cty)
+    mgis = gpd.read_file(path + cty + "_massgis_addresses_selected_variables.shp")
+    mgis = mgis.to_crs(str_all.crs)
+    # Create a list of nearest streets for each address point
+    mgis_nearest_str = [list(str_idx.nearest((mgis.loc[i,"geometry"].x, mgis.loc[i,"geometry"].y), K, objects='raw')) for i in range(len(mgis))]
+    # Compute the actual distance from the address point to pre-selected 20 streets 
+    problem_addr = []
+    for i in range(len(mgis)):
+        print(cty + ", processing address " + str(i) + " out of " + str(len(mgis)))
+        # find actual distance from the address point "i" to K nearest streets (aacording to R-tree spatial index)
+        dist = []
+        for j in range(K):
+            dist.append(mgis.loc[i,"geometry"].distance(str_all["geometry"][mgis_nearest_str[i][j]]))
+        
+        # sort actual distances (from smallest to largest)
+        srtd = dist[:]
+        srtd.sort()
+        # select k nearest streets, convert their names to upper case
+        c = [mgis_nearest_str[i][l] for l in [dist.index(srtd[i]) for i in range(k)]]
+        nearest_streets_names = set(str_all.loc[c,"name"])
+        nearest_streets_names.discard(None)
+        nearest_streets_names_upper = [x.upper() for x in nearest_streets_names]
+        # if names of the street in addr:street does not match k nearest streets, then store the "i" index
+        if mgis.loc[i,"STREET_NAM"]!=None: # CHECK ADDRESSES with empty street names!!
+            if mgis.loc[i,"STREET_NAM"].upper() not in nearest_streets_names_upper:
+                problem_addr.append(i)
+    
+    # Save the resulting Geopandas DataFrames into files
+    problem_mgis = mgis.loc[problem_addr]
+    problem_mgis.to_file(path + cty + '_problem_mgis.shp')
+
+
+
+
 ##### The script is work in progress
 ##### It runs OK up to this point
 ##### Below are parts of code used for some trial-and-error matching of MassGIS addresss to OSM buildings 
 
 
 #-----------------------------------------------------------------------
-# Step 3: check existing addresses, exclude from MassGIS import those that are already in OSM
+# Step 4: check existing addresses, exclude from MassGIS import those that are already in OSM
 gc.collect()
 mgis = gpd.read_file(mgis_output_file)
 
