@@ -8,6 +8,8 @@ The wiki-page for the import: https://wiki.openstreetmap.org/wiki/Import/Catalog
 
 MEGA folder with files: https://mega.nz/#F!npsVmAiJ!1N69UR3I7E1PMZEQHDwBPQ 
 
+Google Spreadsheet for tracking edits (mismatches in street names, adding absent buildings): https://docs.google.com/spreadsheets/d/1BRMv2iwsg7ZMUiVwtP9JUD5xO8s98ucfVY_1F3DJDfc/edit#gid=1753549676
+
 # Prerequisites
 
  - postgresql (tested with 9.5)
